@@ -1,17 +1,17 @@
 import struct
 
 class SHA3_256:
-
-    # Sprint 4: SHA3-256 implementation from scratch
-
+    """
+    Sprint 4: SHA3-256 implementation from scratch
+    Follows NIST FIPS 202 specification
+    Keccak sponge construction with 1088-bit rate
+    """
     
     def __init__(self):
-        # SHA3-256 parameters
-        self.rate = 1088  # bits (136 bytes)
-        self.capacity = 512  # bits (64 bytes)
-        self.output_length = 256  # bits (32 bytes)
+        self.rate = 1088
+        self.capacity = 512
+        self.output_length = 256
         
-        # State: 5x5 matrix of 64-bit words (200 bytes total)
         self.state = [[0] * 5 for _ in range(5)]
         self.buffer = bytearray()
         self.total_length = 0
@@ -32,7 +32,6 @@ class SHA3_256:
             0x8000000000008080, 0x0000000080000001, 0x8000000080008008
         ]
         
-        # Theta step
         C = [0] * 5
         D = [0] * 5
         
@@ -46,7 +45,6 @@ class SHA3_256:
             for y in range(5):
                 self.state[x][y] ^= D[x]
         
-        # Rho and Pi steps
         x, y = 1, 0
         current = self.state[x][y]
         
@@ -55,13 +53,11 @@ class SHA3_256:
             self.state[x][y], current = current, self.state[X][Y]
             x, y = X, Y
         
-        # Chi step
         for y in range(5):
             T = [self.state[x][y] for x in range(5)]
             for x in range(5):
                 self.state[x][y] = T[x] ^ ((~T[(x + 1) % 5]) & T[(x + 2) % 5])
         
-        # Iota step
         for round in range(24):
             self.state[0][0] ^= RC[round]
 
