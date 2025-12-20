@@ -3,6 +3,7 @@ import sys
 from .cli_parser import parse_arguments
 from .file_io import read_binary_file, write_binary_file, read_file_with_iv, write_file_with_iv
 from .csprng import generate_key, generate_iv
+from .kdf.pbkdf2 import pbkdf2_hmac_sha256, generate_salt
 
 # Sprint 1: ECB mode imports
 from .modes.ecb import aes_ecb_encrypt, aes_ecb_decrypt
@@ -213,6 +214,7 @@ def main():
     Main entry point for CryptoCore
     Routes to appropriate handler based on command
     """
+    
     try:
         args = parse_arguments()
         
@@ -220,6 +222,7 @@ def main():
             handle_encryption(args)
         elif args.command == 'dgst':
             handle_hash(args)
+        
         else:
             print(f"Error: Unknown command '{args.command}'", file=sys.stderr)
             sys.exit(1)
@@ -227,6 +230,80 @@ def main():
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+def derive_command(args):
+    """Handle derive command"""
+    try:
+        # Read password from file if specified
+        password = None
+        if args.password_file:
+            with open(args.password_file, 'r') as f:
+                password = f.read().strip()
+        else:
+            password = args.password
+        
+        if not password:
+            print("Error: Password cannot be empty")
+            return 1
+        
+        # Generate salt if not provided
+        if args.salt is None:
+            salt = generate_salt(16)
+            salt_hex = salt.hex()
+            print(f"Generated salt: {salt_hex}")
+            
+            # Save salt to file if requested
+            if args.output_salt:
+                with open(args.output_salt, 'w') as f:
+                    f.write(salt_hex)
+                print(f"Salt saved to: {args.output_salt}")
+        else:
+            salt_hex = args.salt
+            salt = bytes.fromhex(salt_hex)
+        
+        # Validate parameters
+        if args.iterations < 1:
+            print("Error: Iterations must be positive")
+            return 1
+        
+        if args.length < 1:
+            print("Error: Length must be positive")
+            return 1
+        
+        # Derive key
+        print(f"Deriving key with {args.iterations} iterations...")
+        derived_key = pbkdf2_hmac_sha256(
+            password=password,
+            salt=salt,
+            iterations=args.iterations,
+            dklen=args.length
+        )
+        
+        # Clear password from memory
+        password = None
+        args.password = None
+        
+        # Output result
+        if args.output:
+            with open(args.output, 'wb') as f:
+                f.write(derived_key)
+            print(f"Key written to {args.output}")
+            print(f"Key (hex): {derived_key.hex()}")
+            print(f"Salt (hex): {salt_hex}")
+        else:
+            # Output format: KEY_HEX SALT_HEX
+            print(f"{derived_key.hex()} {salt_hex}")
+        
+        return 0
+        
+    except ValueError as e:
+        print(f"Error: Invalid input format - {e}")
+        return 1
+    except Exception as e:
+        print(f"Error during key derivation: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,9 @@
 import argparse
 import sys
+try:
+    from cryptocore.kdf.pbkdf2 import pbkdf2_hmac_sha256, generate_salt
+except ImportError:
+    from kdf.pbkdf2 import pbkdf2_hmac_sha256, generate_salt
 
 def parse_arguments():
     """
@@ -223,3 +227,68 @@ def _is_weak_key(key_bytes):
                     return True
     
     return False
+
+def add_derive_subparser(subparsers):
+    """Add derive command to CLI"""
+    derive_parser = subparsers.add_parser(
+        'derive',
+        help='Derive keys from passwords or master keys'
+    )
+    
+    # Группа для ввода пароля
+    password_group = derive_parser.add_mutually_exclusive_group(required=True)
+    password_group.add_argument(
+        '--password',
+        type=str,
+        help='Password string (use quotes for special characters)'
+    )
+    password_group.add_argument(
+        '--password-file',
+        type=str,
+        help='File containing password'
+    )
+    
+    derive_parser.add_argument(
+        '--salt',
+        type=str,
+        default=None,
+        help='Salt as hexadecimal string (generated if not provided)'
+    )
+    
+    derive_parser.add_argument(
+        '--iterations',
+        type=int,
+        default=100000,
+        help='Number of iterations (default: 100000)'
+    )
+    
+    derive_parser.add_argument(
+        '--length',
+        type=int,
+        default=32,
+        help='Derived key length in bytes (default: 32)'
+    )
+    
+    derive_parser.add_argument(
+        '--algorithm',
+        type=str,
+        default='pbkdf2',
+        choices=['pbkdf2'],
+        help='KDF algorithm (default: pbkdf2)'
+    )
+    
+    derive_parser.add_argument(
+        '--output',
+        type=str,
+        default=None,
+        help='Output file for derived key (binary format)'
+    )
+    
+    derive_parser.add_argument(
+        '--output-salt',
+        type=str,
+        default=None,
+        help='Output file for salt (if generated)'
+    )
+    
+    return derive_parser

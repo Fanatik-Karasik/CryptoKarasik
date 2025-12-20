@@ -1,4 +1,7 @@
-# MAC functions package
-# Sprint 5: HMAC implementation for data authenticity and integrity
+"""
+MAC (Message Authentication Code) implementations
+"""
 
-from .hmac import HMAC, hmac_sha256, hmac_sha256_file
+from .hmac import HMAC, hmac_sha256
+
+__all__ = ['HMAC', 'hmac_sha256']
